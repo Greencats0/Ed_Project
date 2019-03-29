@@ -22,24 +22,15 @@ char  genbuf[LBSIZE], *nextip, *linebp, *globp, *mktemp(char *), tmpXXXXX[50] = 
 char  *tfname, *loc1, *loc2, ibuff[BLKSIZE], obuff[BLKSIZE], WRERR[]  = "WRITE ERROR", *braslist[NBRA], *braelist[NBRA];
 char  line[70];  char  *linp  = line;
 char grepbuf[GBSIZE];
-int main(int argc, char *argv[]) {  //char *p1, *p2;  SIG_TYP oldintr;  oldquit = signal(SIGQUIT, SIG_IGN);
-  /*oldhup = signal(SIGHUP, SIG_IGN);  oldintr = signal(SIGINT, SIG_IGN);
-  if (signal(SIGTERM, SIG_IGN) == SIG_DFL) { signal(SIGTERM, quit); }  argv++;
-  while (argc > 1 && **argv=='-') {
-    switch((*argv)[1]) {
-    case '\0': vflag = 0;  break;
-    case 'q': signal(SIGQUIT, SIG_DFL);  vflag = 1;  break;
-    case 'o': oflag = 1;  break;
-    }
-    argv++;  argc--;
-  }
-
-  if (oflag) {  p1 = "/dev/stdout";  p2 = savedfile;  while ((*p2++ = *p1++) == 1) { } }
-  if (argc > 1) {  p1 = *argv;  p2 = savedfile;
-    while ((*p2++ = *p1++) == 1) {  if (p2 >= &savedfile[sizeof(savedfile)]) { p2--; }  }  globp = "r";
-  }*/
-  zero = (unsigned *)malloc(nlall * sizeof(unsigned));  //tfname = mktemp(tmpXXXXX); // init();
-  commands();
+char cmdbuf[LBSIZE];
+int main(int argc, char *argv[]) {
+  zero = (unsigned *)malloc(nlall * sizeof(unsigned));
+  //commands();
+  grep_read(argv[2]);
+  //printf("%s",genbuf);
+  strcpy(cmdbuf,argv[1]);
+  printf("%s",cmdbuf);
+  //global(1);
   return 0;
 }
 void commands(void) {  unsigned int *a1;  int c, temp;  char lastsep;
@@ -57,10 +48,7 @@ void commands(void) {  unsigned int *a1;  int c, temp;  char lastsep;
     case EOF:  return;
     case '\n':  if (a1 == 0) { a1 = dot + 1;  addr2 = a1;  addr1 = a1; }
                 if (lastsep == ';') { addr1 = a1; }  print();  continue;
-    case 'e':  setnoaddr(); if (vflag && fchange) { fchange = 0;  error(Q); } filename(c);  init();
-               addr2 = zero;  if ((io = open((const char*)file, 0)) < 0) { lastc = '\n';  error(file); }  setwide();  squeeze(0);
-                        ninbuf = 0;  c = zero != dol;
-               append(getfile, addr2);  exfile();  fchange = c; continue;
+    //case 'e':
     case 'g':  global(1);  continue;
     case 'p':  case 'P':  newline();  print();  continue;
     case 'Q':  fchange = 0;  case 'q':  setnoaddr();  newline();  quit(0);
@@ -224,18 +212,10 @@ int execute(unsigned int *addr) {  char *p1, *p2 = expbuf;  int c;
   }
   do {  /* regular algorithm */   if (advance(p1, p2)) {  loc1 = p1;  return(1);  }  } while (*p1++);  return(0);
 }
-void exfile(void) {  close(io);  io = -1;  if (vflag) {  putd();  putchr_('\n'); }  }
-void filename(int comm) {  char *p1, *p2;  int c;  count = 0;  c = getchr();
-  if (c == '\n' || c == EOF) {
-    p1 = savedfile;  if (*p1 == 0 && comm != 'f') { error(Q); }  p2 = file;  while ((*p2++ = *p1++) == 1) { }  return;
-  }
-  if (c!=' ') { error(Q); }
-  while ((c = getchr()) == ' ') { }  if (c=='\n') { error(Q); }  p1 = file;
-  do {
-    if (p1 >= &file[sizeof(file) - 1] || c == ' ' || c == EOF) { error(Q); }  *p1++ = c;
-  } while ((c = getchr()) != '\n');
-  *p1++ = 0;
-  if (savedfile[0] == 0||comm == 'e'||comm == 'f') { p1 = savedfile;  p2 = file;  while ((*p1++ = *p2++) == 1) { } }
+void exfile(void) {  close(io);  io = -1;  if (vflag) {  /*putd();*/  putchr_('\n'); }  }
+void filename(const char* cs) {
+  strcpy(file,cs);
+  strcpy(savedfile,cs);
 }
 char * getblock(unsigned int atl, int iof) {  int off, bno = (atl/(BLKSIZE/2));  off = (atl<<1) & (BLKSIZE-1) & ~03;
   if (bno >= NBLK) {  lastc = '\n';  error(T);  }  nleft = BLKSIZE - off;
@@ -363,6 +343,12 @@ int putline(void) {  char *bp, *lp;  int nl;  unsigned int tl;  fchange = 1;  lp
 }
 void puts_(char *sp) {  col = 0;  while (*sp) { putchr_(*sp++); }  putchr_('\n');  }
 void quit(int n) { if (vflag && fchange && dol!=zero) {  fchange = 0;  error(Q);  }  unlink(tfname); exit(0); }
+void grep_read(const char* cs){
+  setnoaddr(); if (vflag && fchange) { fchange = 0;  error(Q); } filename(cs);  init();
+             addr2 = zero;  if ((io = open((const char*)file, 0)) < 0) { lastc = '\n';  error(file); }  setwide();  squeeze(0);
+                      ninbuf = 0;
+             append(getfile, addr2);  exfile();
+}
 void reverse(unsigned int *a1, unsigned int *a2) {  int t;
   for (;;) {  t = *--a2;  if (a2 <= a1) { return; }  *a2 = *a1;  *a1++ = t;  }
 }
