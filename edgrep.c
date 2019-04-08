@@ -10,7 +10,9 @@ const int ESIZE = 256; const int GBSIZE = 256;  const int NBRA = 5;  const int K
 const int CCHR = 2;  const int CDOT = 4;  const int CCL = 6;  const int NCCL = 8;  const int CDOL = 10;
 const int CEOF = 11;  const int CKET = 12;  const int CBACK = 14;  const int CCIRC = 15;  const int STAR = 01;
 const int READ = 0;  const int WRITE = 1;  /* const int EOF = -1; */
-
+#define BUFSIZE 100
+char buf[BUFSIZE];
+int bufp = 0;
 int  peekc, lastc, given, ninbuf, io, pflag;
 int  vflag  = 1, oflag, listf, listn, col, tfile  = -1, tline, iblock  = -1, oblock  = -1, ichanged, nleft;
 int  names[26], anymarks, nbra, subnewa, subolda, fchange, wrapp, bpagesize = 20;
@@ -24,14 +26,44 @@ char  line[70];  char  *linp  = line;
 char grepbuf[GBSIZE];
 char cmdbuf[LBSIZE];
 int main(int argc, char *argv[]) {
+  if (argc != 3) {
+    fprintf(stderr, "Usage: ./grep searchre file(s)\n");
+    //exit(ARGC_ERROR);
+  }
   zero = (unsigned *)malloc(nlall * sizeof(unsigned));
-  //commands();
+  tfname = mktemp(tmpXXXXX);
+  init();
   grep_read(argv[2]);
-  //printf("%s",genbuf);
-  strcpy(cmdbuf,argv[1]);
-  printf("%s",cmdbuf);
-  //global(1);
+  search(argv[1]);
+  printf("\nquitting...\n");  exit(1);
   return 0;
+}
+
+int getch_(void) {
+  char c = (bufp > 0) ? buf[--bufp] : getchar();
+  lastc = c & 0177;
+//  if (lastc == '\n') {  // uncomment if you want to see the chars
+//    printf("getch(): newline\n");
+//  } else {
+//     printf("getch_(): %c\n", lastc);
+// }
+
+  return lastc;
+}
+void ungetch_(int c) {
+  if (bufp >= BUFSIZE) {
+    printf("ungetch: overflow\n");
+  }  else {
+    buf[bufp++] = c;
+  }
+}
+
+void search(const char* re) {
+  char buf[GBSIZE];
+  snprintf(buf, sizeof(buf), "/%s\n", re);  // / and \n very important
+  //drawline();
+  printf("g%s", buf);  const char* p = buf + strlen(buf) - 1;
+  while (p >= buf) { ungetch_(*p--); }  global(1);
 }
 void commands(void) {  unsigned int *a1;  int c, temp;  char lastsep;
   for (;;) {
