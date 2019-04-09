@@ -23,3 +23,6 @@ void greperror(char);  void grepline(void);
 void ungetch_(int c);
 void search(const char* re);
 int getch_(void);
+void search_file(const char* filename, const char* searchfor);
+void process_dir(const char* dir, const char* searchfor, void (*fp)(const char*, const char*));
+void printcommand(void);

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
+#include <glob.h>
 #include "edgrep.h"
 const int BLKSIZE = 4096;  const int NBLK = 2047;  const int FNSIZE = 128;  const int LBSIZE = 4096;
 const int ESIZE = 256; const int GBSIZE = 256;  const int NBRA = 5;  const int KSIZE = 9;  const int CBRA = 1;
@@ -33,12 +34,31 @@ int main(int argc, char *argv[]) {
   zero = (unsigned *)malloc(nlall * sizeof(unsigned));
   tfname = mktemp(tmpXXXXX);
   init();
-  grep_read(argv[2]);
-  search(argv[1]);
+  process_dir(argv[2],argv[1],&search_file);
   printf("\nquitting...\n");  exit(1);
   return 0;
 }
 
+
+void search_file(const char* filename, const char* searchfor) {
+  printf("\n");  //drawline();  drawline();
+  printf("processing %s...\n", filename); // drawline();
+  grep_read(filename);
+  search(searchfor);
+}
+void process_dir(const char* dir, const char* searchfor, void (*fp)(const char*, const char*)) {
+  if (strchr(dir, '*') == NULL) {  search_file(dir, searchfor);  return; }  // search one file
+
+        // or search a directory of files using glob()
+  glob_t results;  memset(&results, 0, sizeof(results));  glob(dir, 0, NULL, &results);
+  //drawline();  drawline();  drawline();
+  printf("processing files in %s...\n\n", dir);
+  for (int i = 0; i < results.gl_pathc; ++i) {
+    const char* filename = results.gl_pathv[i];
+    fp(filename, searchfor);    // function ptr to function that reads and searches a file
+  }
+  globfree(&results);
+}
 int getch_(void) {
   char c = (bufp > 0) ? buf[--bufp] : getchar();
   lastc = c & 0177;
@@ -57,7 +77,21 @@ void ungetch_(int c) {
     buf[bufp++] = c;
   }
 }
-
+void printcommand(void) {  int c;  char lastsep;
+  for (;;) {  unsigned int* a1;
+    if (pflag) { pflag = 0;  addr1 = addr2 = dot;  print(); }  c = '\n';
+    for (addr1 = 0;;) {  lastsep = c;  a1 = address();  c = getchr();
+      if (c != ',' && c != ';') { break; }  if (lastsep==',') { error(Q); }
+      if (a1==0) {  a1 = zero+1;  if (a1 > dol) { a1--; }  }  addr1 = a1;  if (c == ';') { dot = a1; }
+    }
+    if (lastsep != '\n' && a1 == 0) { a1 = dol; }
+    if ((addr2 = a1)==0) { given = 0;  addr2 = dot;  } else { given = 1; }  if (addr1==0) { addr1 = addr2; }
+    switch(c) {
+      case 'p':  case 'P':  newline();  print();  continue;
+      case EOF:  default:  return;
+    }
+  }
+}
 void search(const char* re) {
   char buf[GBSIZE];
   snprintf(buf, sizeof(buf), "/%s\n", re);  // / and \n very important
@@ -65,59 +99,7 @@ void search(const char* re) {
   printf("g%s", buf);  const char* p = buf + strlen(buf) - 1;
   while (p >= buf) { ungetch_(*p--); }  global(1);
 }
-void commands(void) {  unsigned int *a1;  int c, temp;  char lastsep;
-  for (;;) {
-    if (pflag) { pflag = 0;  addr1 = addr2 = dot;  print(); }  c = '\n';
-    for (addr1 = 0;;) {
-      lastsep = c;  a1 = address();  c = getchr();
-      if (c != ',' && c != ';') { break; }  if (lastsep==',') { error(Q); }
-      if (a1==0) {  a1 = zero+1;  if (a1 > dol) { a1--; }  }  addr1 = a1;  if (c == ';') { dot = a1; }
-    }
-    if (lastsep != '\n' && a1 == 0) { a1 = dol; }
-    if ((addr2 = a1)==0) { given = 0;  addr2 = dot;  } else { given = 1; }
-    if (addr1==0) { addr1 = addr2; }
-    switch(c) {
-    case EOF:  return;
-    case '\n':  if (a1 == 0) { a1 = dot + 1;  addr2 = a1;  addr1 = a1; }
-                if (lastsep == ';') { addr1 = a1; }  print();  continue;
-    //case 'e':
-    case 'g':  global(1);  continue;
-    case 'p':  case 'P':  newline();  print();  continue;
-    case 'Q':  fchange = 0;  case 'q':  setnoaddr();  newline();  quit(0);
-    case 'z':  grepline();  continue;
 
-    case 'a':  /* add(0);  continue; */  // fallthrough
-    case 'c':  /* nonzero(); newline(); rdelete(addr1,addr2); append(gettty, addr1-1); continue; */  // fallthrough
-    case 'd':  /* nonzero();  newline();  rdelete(addr1,addr2);  continue; */  // fallthrough
-    case 'E':  /* fchange = 0;  c = 'e'; */  // fallthrough
-    case 'f':  /* setnoaddr();  filename(c);  puts_(savedfile);  continue; */  // fallthrough
-    case 'i':  /* add(-1);  continue;  */  // fallthrough
-    case 'j':  /* if (!given) { addr2++; }  newline();  join();  continue; */  // fallthrough
-    case 'k':  /* nonzero();  if ((c = getchr()) < 'a' || c > 'z') { error(Q); }  newline();
-                names[c-'a'] = *addr2 & ~01;  anymarks |= 01;  continue; */  // fallthrough
-    case 'l':  /* listf++; */  // fallthrough
-    case 'm':  /* move_(0);  continue; */  // fallthrough
-    case 'n':  /* listn++;  newline();  print();  continue;  */  // fallthrough
-    case 'r':  /* filename(c); */  // fallthrough
-    case 's':  /* nonzero();  substitute(globp!=0);  continue; */  // fallthrough
-    case 't':  /* move_(1);  continue;  */  // fallthrough
-    case 'u':  /* nonzero();  newline(); if ((*addr2&~01) != subnewa) { error(Q); }  *addr2 = subolda;
-                dot = addr2; continue; */  // fallthrough
-    case 'v':  /* global(0);  continue; */ // falthrough
-    case 'W':  /* wrapp++;  case 'w': setwide();  squeeze(dol > zero);
-      if ((temp = getchr()) != 'q' && temp != 'Q') { peekc = temp;  temp = 0; } filename(c);
-      if (!wrapp || ((io = open(file, 1)) == -1) || lseek(io, 0L, 2) == -1) {
-        if ((io = creat(file, 0666)) < 0) { error(file); } }  wrapp = 0;
-      if (dol > zero) { putfile(); } exfile();  if (addr1 <= zero+1 && addr2 == dol) { fchange = 0; }
-                if (temp == 'Q') { fchange = 0; }  if (temp) { quit(0); } continue; */  // fallthrough
-    case '=':  /* setwide();  squeeze(0);  newline();  count = addr2 - zero;  putd();  putchr_('\n'); continue; */
-               // fallthrough
-    case '!':  /* callunix();  continue; */  // fallthrough
-    default:  // fallthrough
-    caseGrepError:  greperror(c);  continue;
-    }  error(Q);
-  }
-}
 //void add(int i) {  if (i && (given || dol>zero)) {  addr1--;  addr2--;  }  squeeze(0);  newline();  append(gettty, addr2); }
 unsigned int* address(void) {  int sign;  unsigned int *a, *b;  int opcnt, nextopand;  int c;
   nextopand = -1;  sign = 1;  opcnt = 0;  a = dot;
@@ -264,8 +246,7 @@ char inputbuf[GBSIZE];
 int getchr(void) {  char c;
   if ((lastc=peekc)) {  peekc = 0;  return(lastc); }
   if (globp) {  if ((lastc = *globp++) != 0) { return(lastc); }  globp = 0;  return(EOF);  }
-  if (read(0, &c, 1) <= 0) { return(lastc = EOF); }
-  lastc = c&0177;  return(lastc);
+  return getch_();
 }
 // int getcopy(void) { if (addr1 > addr2) { return(EOF); }  getline_blk(*addr1++);  return(0); }
 int getfile(void) {  int c;  char *lp = linebuf, *fp = nextip;
@@ -302,7 +283,7 @@ void global(int k) {  char *gp;  int c;  unsigned int *a1;  char globuf[GBSIZE];
 // file grep doesn't delete
 //  if (globuf[0] == 'd' && globuf[1] == '\n' && globuf[2] == '\0') {  gdelete();  return; }  // special: g/.../d avoid n^2
   for (a1 = zero; a1 <= dol; a1++) {
-    if (*a1 & 01) {  *a1 &= ~01;  dot = a1;  globp = globuf;  commands();  a1 = zero; }
+    if (*a1 & 01) {  *a1 &= ~01;  dot = a1;  globp = globuf;  printcommand();  a1 = zero; }
   }
 }
 void greperror(char c) {  getchr();  /* throw away '\n' */
