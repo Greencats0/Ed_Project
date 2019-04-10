@@ -27,6 +27,7 @@ char  line[70];  char  *linp  = line;
 char grepbuf[GBSIZE];
 char cmdbuf[LBSIZE];
 int main(int argc, char *argv[]) {
+  printf("%s",argv[2]);
   if (argc != 3) {
     fprintf(stderr, "Usage: ./grep searchre file(s)\n");
     //exit(ARGC_ERROR);
@@ -34,6 +35,12 @@ int main(int argc, char *argv[]) {
   zero = (unsigned *)malloc(nlall * sizeof(unsigned));
   tfname = mktemp(tmpXXXXX);
   init();
+  if(argc>3){
+  for(int i=2; i<argc;i++){
+    search_file(argv[i],argv[1]);
+  }
+}
+  //printf("%s",argv[2]);
   process_dir(argv[2],argv[1],&search_file);
   printf("\nquitting...\n");  exit(1);
   return 0;
@@ -47,7 +54,8 @@ void search_file(const char* filename, const char* searchfor) {
   search(searchfor);
 }
 void process_dir(const char* dir, const char* searchfor, void (*fp)(const char*, const char*)) {
-  if (strchr(dir, '*') == NULL) {  search_file(dir, searchfor);  return; }  // search one file
+  if (strchr(dir, '*') == NULL) {
+    search_file(dir, searchfor);  return; }  // search one file
 
         // or search a directory of files using glob()
   glob_t results;  memset(&results, 0, sizeof(results));  glob(dir, 0, NULL, &results);
