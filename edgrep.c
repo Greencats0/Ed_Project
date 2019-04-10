@@ -314,11 +314,10 @@ void newline(void) {  int c;  if ((c = getchr()) == '\n' || c == EOF) { return; 
 }
 void nonzero(void) { squeeze(1); }
 void onhup(int n) {
-  signal(SIGINT, SIG_IGN);  signal(SIGHUP, SIG_IGN);
   if (dol > zero) {  addr1 = zero+1;  addr2 = dol;  io = creat("ed.hup", 0600);  if (io > 0) { putfile(); } }
   fchange = 0;  quit(0);
 }
-void onintr(int n) { signal(SIGINT, onintr);  putchr_('\n');  lastc = '\n';  error(Q);  }
+void onintr(int n) { putchr_('\n');  lastc = '\n';  error(Q);  }
 void print(void) {  unsigned int *a1 = addr1;  nonzero();
   do {  if (listn) {  count = a1 - zero;  putd();  putchr_('\t');  }  puts_(getline_blk(*a1++));  } while (a1 <= addr2);
   dot = addr2;  listf = 0;  listn = 0;  pflag = 0;
