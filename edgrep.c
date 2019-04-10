@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
 
 void search_file(const char* filename, const char* searchfor) {
   printf("\n");  //drawline();  drawline();
-  printf("processing %s...\n", filename); // drawline();
+  printf("%s:\n", filename); // drawline();
   grep_read(filename);
   search(searchfor);
 }
