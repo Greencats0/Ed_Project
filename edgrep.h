@@ -6,7 +6,7 @@
 #include <fcntl.h>
 #include <string.h>
 
-void commands(void); void add(int i);  unsigned int *address(void);  int advance(char *lp, char *ep);
+void add(int i);  unsigned int *address(void);  int advance(char *lp, char *ep);
 int append(int (*f)(void), unsigned int *a);  int backref(int i, char *lp);
 void blkio(int b, char *buf, long (*iofcn)(int, void*, unsigned long));
 int cclass(char *set, int c, int af);  void compile(int eof);
