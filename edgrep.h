@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
+#include <glob.h>
 const int BLKSIZE = 4096;  const int NBLK = 2047;  const int FNSIZE = 128;  const int LBSIZE = 4096;
 const int ESIZE = 256; const int GBSIZE = 256;  const int NBRA = 5;  const int KSIZE = 9;  const int CBRA = 1;
 const int CCHR = 2;  const int CDOT = 4;  const int CCL = 6;  const int NCCL = 8;  const int CDOL = 10;
@@ -12,6 +13,7 @@ const int CEOF = 11;  const int CKET = 12;  const int CBACK = 14;  const int CCI
 const int READ = 0;  const int WRITE = 1;  /* const int EOF = -1; */
 #define BUFSIZE 100
 char buf[BUFSIZE];
+char inputbuf[GBSIZE];
 int bufp = 0;
 int  peekc, lastc, given, ninbuf, io, pflag;
 int  vflag  = 1, oflag, listf, listn, col, tfile  = -1, tline, iblock  = -1, oblock  = -1, ichanged, nleft;
